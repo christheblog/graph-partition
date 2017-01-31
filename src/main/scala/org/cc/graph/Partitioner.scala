@@ -9,12 +9,13 @@ object Partitioner {
 
 
   // Generates a stream graph nodes splitted in left/right partitions
-  // Each new stream element attempt to minimize the node connections between partitions
+  // Each element from the stream attempt to minimize further the number of connection between the left/right buckets
   //
   // Algorithm :
-  // - Split nodes into 2 equal size buckets, left and right
+  // - Split nodes into 2 equal size buckets - left and right
   // - Compute for each node the "gain" of a swap, ie nb of left/right connections removed if we swap the node
   // - Swap a batch of nodes between left and right, keeping the balance of the partitions
+  // - reiterate on the new left/right buckets
   def partition2[A](g: Graph[A])(split : Splitter2[A]): Stream[(Nodes[A], Nodes[A])] = {
     val (left,right) = split(g)
     lazy val iter: Stream[(Nodes[A], Nodes[A])] =
@@ -22,8 +23,7 @@ object Partitioner {
     iter
   }
 
-  // Generates a stream graph nodes splitted in left/right partitions
-  // Each new stream element attempt to minimize the node connections between partitions
+  // One iteration of the algorithm, batch-optimizing connections between left and right buckets
   private[graph] def partition2[A](g: Graph[A], left: Nodes[A],right: Nodes[A]): (Nodes[A], Nodes[A]) = {
     val leftSet: Set[A] = left.map(_._2).toSet
     val rightSet: Set[A] = right.map(_._2).toSet
@@ -36,7 +36,7 @@ object Partitioner {
       (inLeft.size + outLeft.size, inRight.count(rightSet) + outRight.count(rightSet))
     }
 
-    // TODO : make gain() a parameter ?
+    // TODO : make gain() a parameter to external control ? we would need a more generic signature
     // How many cross-connections would we save if the node was on the other side ?
     def gain(node: Node[A], count: (Int,Int)): Int = {
       val (l,r) = count
@@ -57,6 +57,7 @@ object Partitioner {
     // Condition is that : gain(left node) + gain(right node) > 0
     val swapCount = (cgLeft zip cgRight)
       .foldLeft(0) { case (acc, ((_,l),(_,r))) => if(l+r > 0) acc + 1 else acc }
+    // Swapping left/right nodes to compute new buckets. Bucket size doesn't change !
     val (rl,rr) = cgRight.splitAt(swapCount)
     val (ll,lr) = cgLeft.splitAt(swapCount)
     val newLeft = (rl ++ lr).map(_._1)

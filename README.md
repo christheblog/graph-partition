@@ -8,18 +8,18 @@ while minimizing the number of cross-buckets connections.
 
 An application of this could be answering questions like :
 - how do I distribute a system of `x` location-transparent actors on `n` servers, 
-in order to minimize network traffic (that is, maximize intra-JVM messages).
+in order to minimize network traffic (that is, maximizing intra-JVM messages).
 
 
-The implementation (and thinking !) of this algorithm is still at a very early stage, 
-but first test results on some randomly generated graph seem encouraging.<br>
-Performances (especially the `n buckets` case are not good - but several code optimisation are still possible, including paralelisation)
+The implementation (and thinking process !) of this algorithm is still at a very early stage, 
+but first test results on some randomly generated graphs seem encouraging.<br>
+Performances (especially the `n buckets` case) are not yet good - but several code optimisation are still possible, including parallelizing some parts of the code).
 
 
 
 ## The algorithm : `partition2`
 
-The base implementation of the algorithm is partitioning nodes of a in 2 equal parts (called left and right).
+The base implementation of the algorithm is partitioning nodes of a graph in 2 equally sized parts (left and right).
 ```scala
 def partition2[A](g: Graph[A])(split : Splitter2[A]): Stream[(Nodes[A], Nodes[A])]
 ```
@@ -35,7 +35,7 @@ The highest gain node from left is exchanged with the highest gain one from righ
 <li>This is one iteration done. Repeat from 2.
 </ol>
 
-In practice just a few iterations seems to be enough to reach a significant reduction of the cross bucket connections.
+In practice just a few iterations seems to be enough to reach a significant reduction of the cross-bucket connections.
 The algorithm will reach a 'relative' convergence (Number of cross-bucket connections can oscillate - this is due to the 'batch' nature of the gain calculation)
 
 
